@@ -87,6 +87,31 @@ function addMessage(role, text) {
 }
 
 // =======================
+// Typing Indicator Functions
+// =======================
+function showTypingIndicator() {
+    const chatBody = document.getElementById('chat-messages');
+    if (!chatBody || document.getElementById('typing-indicator')) return;
+
+    const typingDiv = document.createElement('div');
+    typingDiv.id = 'typing-indicator';
+    typingDiv.className = 'message sympy typing';
+    // Three dots for the animation
+    typingDiv.innerHTML = `
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+    `;
+    chatBody.appendChild(typingDiv);
+    chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+}
+
+// =======================
 // Send Chat
 // =======================
 async function sendMessage() {
@@ -97,6 +122,9 @@ async function sendMessage() {
 
     addMessage("user", messageText);
     input.value = '';
+
+    // START TYPING ANIMATION
+    showTypingIndicator();
 
     const url = `${BASE_URL}/chat?voice=${selectedVoice}&vibe=${currentVibe}`;
 
@@ -111,8 +139,12 @@ async function sendMessage() {
         });
 
         const data = await response.json();
+        
+        // STOP TYPING ANIMATION
+        hideTypingIndicator();
         addMessage("sympy", data.reply);
     } catch (e) {
+        hideTypingIndicator();
         addMessage("sympy", "Connection issue. Try again.");
     }
 }
@@ -144,17 +176,14 @@ async function startVoiceCall() {
     isConnecting = true;
     hasConnectedOnce = false;
 
-    // Navigate to call screen
     navigateTo('call-overlay');
     const statusEl = document.getElementById('call-status-text');
     if (statusEl) statusEl.innerText = "Connecting...";
     resetTimer();
 
     try {
-        // Unlock mic (user gesture)
         await __unlockAudioOnce();
 
-        // Get LiveKit token
         const tokenRes = await fetch(
             `${BASE_URL}/get_token?gender=${selectedVoice}&vibe=${currentVibe}`,
             { headers: { 'X-API-KEY': API_KEY } }
@@ -162,13 +191,9 @@ async function startVoiceCall() {
         if (!tokenRes.ok) throw new Error("Token fetch failed");
         const tokenData = await tokenRes.json();
 
-        // Disconnect old room if exists
         if (room) try { await room.disconnect(); } catch (_) {}
-
-        // Initialize LiveKit Room
         room = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
 
-        // Subscribe to remote audio
         room.on(LivekitClient.RoomEvent.TrackSubscribed, track => {
             if (track.kind === "audio") {
                 const audio = track.attach();
@@ -180,10 +205,7 @@ async function startVoiceCall() {
             }
         });
 
-        // Connect to room
         await room.connect(tokenData.url, tokenData.token);
-
-        // Enable mic
         try { await room.localParticipant.setMicrophoneEnabled(true); } catch (_) {}
 
         hasConnectedOnce = true;
@@ -191,7 +213,6 @@ async function startVoiceCall() {
         startDurationTimer();
         __markCallStarted();
 
-        // Safety timeout
         connectionTimeout = setTimeout(() => {
             if (!hasConnectedOnce) softFailCall();
         }, 15000);
@@ -242,15 +263,11 @@ function softFailCall() {
 function endCall() {
     const elapsed = Date.now() - __callStartedAt;
     if (!__callExitAllowed && elapsed < 4000 && hasConnectedOnce) {
-        console.log("[CALL FIX] Exit blocked (mobile settling)");
         return;
     }
-
     isConnecting = false;
     if (connectionTimeout) clearTimeout(connectionTimeout);
-
     try { if (room) room.disconnect(); } catch (_) {}
-
     resetTimer();
     navigateTo('chat-screen');
 }
@@ -283,17 +300,15 @@ function handleKeyPress(e) {
 const mainCallBtn = document.getElementById('call-btn');
 if (mainCallBtn) {
     mainCallBtn.onclick = async () => {
-        mainCallBtn.disabled = true; // prevent double taps
+        mainCallBtn.disabled = true;
         await startVoiceCall();
         mainCallBtn.disabled = false;
     };
 }
 
-// Unlock audio on first real click (Chrome-safe)
 document.addEventListener("click", async () => {
     if (!__audioUnlocked) await __unlockAudioOnce();
 });
 
-// Keyboard shortcut
 const inputEl = document.getElementById('user-input');
 if (inputEl) inputEl.addEventListener('keypress', handleKeyPress);

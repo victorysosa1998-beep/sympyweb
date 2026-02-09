@@ -82,7 +82,6 @@ h1 { font-size: 36px; font-weight: bold; }
     margin: 0 auto 15px;
 }
 
-/* RESPONSIVE BUTTON FIX */
 .btn-primary {
     padding: 14px 0;
     border-radius: 40px;
@@ -103,7 +102,6 @@ h1 { font-size: 36px; font-weight: bold; }
     background-size: 300% 100%;
 }
 
-/* CHAT HEADER RESPONSIVENESS */
 #chat-screen { justify-content: flex-start; padding: 0; }
 
 .chat-header {
@@ -113,10 +111,10 @@ h1 { font-size: 36px; font-weight: bold; }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.7);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
     z-index: 100;
 }
 
@@ -144,7 +142,6 @@ h1 { font-size: 36px; font-weight: bold; }
     align-items: center;
     justify-content: flex-end;
     min-width: 50px;
-    min-height: 50px;
 }
 
 #call-btn {
@@ -157,8 +154,7 @@ h1 { font-size: 36px; font-weight: bold; }
     border: none;
 }
 
-#call-btn:active { transform: scale(0.9); }
-
+/* CHAT BODY WITH VISIBLE BACKGROUND */
 .chat-body {
     flex: 1;
     width: 100%;
@@ -167,6 +163,11 @@ h1 { font-size: 36px; font-weight: bold; }
     display: flex;
     flex-direction: column;
     gap: 12px;
+    /* This sets Missy as the background behind messages */
+    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('assets/images/missy.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .message {
@@ -176,27 +177,59 @@ h1 { font-size: 36px; font-weight: bold; }
     font-size: 16px;
     line-height: 1.4;
     word-wrap: break-word;
+    backdrop-filter: blur(8px); /* Makes text pop over the image */
+    -webkit-backdrop-filter: blur(8px);
 }
-.message.sympy { align-self: flex-start; background: rgba(255,255,255,0.1); border-bottom-left-radius: 2px; }
-.message.user { align-self: flex-end; background: var(--accent-blue); border-bottom-right-radius: 2px; }
+.message.sympy { align-self: flex-start; background: rgba(255,255,255,0.15); border-bottom-left-radius: 2px; border: 1px solid rgba(255,255,255,0.1); }
+.message.user { align-self: flex-end; background: rgba(68, 138, 255, 0.9); border-bottom-right-radius: 2px; }
 
+/* INPUT AREA - FIXED BLACK SIDES */
 .chat-input-area {
     position: sticky;
     bottom: 0;
-    padding-bottom: calc(30px + env(safe-area-inset-bottom));
-    padding-bottom: calc(30px + constant(safe-area-inset-bottom));
+    width: 100%;
+    padding: 10px; /* Minimal padding for a clean look */
+    padding-bottom: calc(15px + env(safe-area-inset-bottom));
+    background: rgba(15, 15, 15, 0.95);
     z-index: 50;
+    border-top: 1px solid rgba(255,255,255,0.05);
 }
 
 .input-wrapper {
-    background: rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.08);
     border-radius: 30px;
     display: flex;
-    padding: 5px 15px;
+    padding: 5px 8px 5px 15px;
     align-items: center;
 }
 
 input { flex: 1; background: transparent; border: none; color: white; padding: 12px; outline: none; font-size: 16px; }
+
+.send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #448AFF, #E040FB);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.send-btn:active { transform: scale(0.9); }
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 20px;
+    cursor: pointer;
+    margin-right: 5px;
+}
 
 /* VIBE CHIPS */
 .vibe-container { 
@@ -205,29 +238,20 @@ input { flex: 1; background: transparent; border: none; color: white; padding: 1
     gap: 12px; 
     margin-bottom: 40px; 
     overflow-y: auto; 
-    overflow-x: hidden; 
     width: 100%; 
     max-height: 55vh; 
     padding: 10px 20px; 
-    scrollbar-width: none; 
-    -webkit-overflow-scrolling: touch;
 }
-
-.vibe-container::-webkit-scrollbar { display: none; }
 
 .vibe-chip {
     padding: 10px 20px;
     background: rgba(255,255,255,0.1);
     border-radius: 20px;
-    white-space: nowrap;
     cursor: pointer;
-    flex-shrink: 0;
 }
 .vibe-chip.active { background: var(--accent-blue); border: 1px solid rgba(255,255,255,0.5); }
 
-/* ... existing code ... */
-
-/* CALL OVERLAY FIX */
+/* CALL OVERLAY */
 #call-overlay {
     position: fixed;
     top: 0;
@@ -236,40 +260,23 @@ input { flex: 1; background: transparent; border: none; color: white; padding: 1
     height: 100vh;
     z-index: 1000;
     background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
-    display: none; /* Changed from flex to none */
+    display: none;
     flex-direction: column;
     align-items: center;      
     justify-content: center;   
     padding: 40px 20px 60px;
 }
 
-/* ... rest of the code ... */
-.call-content-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    width: 100%;
-    gap: 40px;
-}
-
-/* Timer */
 .call-timer {
     font-size: 22px;
-    letter-spacing: 2px;
     color: var(--text-dim);
-    font-weight: 500;
-    text-align: center;
-    width: 100%;
 }
 
-/* Avatar + pulse */
 .call-avatar-container {
     position: relative;
     width: 200px;
     height: 200px;
-    margin: 0 auto;
+    margin: 40px auto;
 }
 
 .call-avatar {
@@ -294,33 +301,12 @@ input { flex: 1; background: transparent; border: none; color: white; padding: 1
     z-index: 1;
 }
 
-/* Missy + status text */
-.call-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    width: 100%;
-    margin-bottom: 60px; /* spacing before controls */
-}
-
-.call-info h2 {
-    text-align: center;
-    margin: 0;
-}
-
-#call-status-text {
-    text-align: center;
-    margin-top: 6px;
-}
-
 .call-controls {
     display: flex;
     gap: 30px;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    padding-bottom: 20px;
+    margin-top: 60px;
 }
 
 .control-btn {
@@ -331,7 +317,6 @@ input { flex: 1; background: transparent; border: none; color: white; padding: 1
     background: rgba(255, 255, 255, 0.1);
     color: white;
     font-size: 22px;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -342,13 +327,6 @@ input { flex: 1; background: transparent; border: none; color: white; padding: 1
     width: 75px;
     height: 75px;
     font-size: 28px;
-    box-shadow: 0 8px 25px rgba(255, 68, 68, 0.4);
-}
-
-/* ANIMATIONS */
-@keyframes pulse {
-    0% { transform: scale(1); }
-    100% { transform: scale(1.03); }
 }
 
 @keyframes ring-pulse {
@@ -358,24 +336,34 @@ input { flex: 1; background: transparent; border: none; color: white; padding: 1
 
 .pulse { animation: pulse 1.5s infinite alternate ease-in-out; }
 
-/* MEDIA QUERIES FOR DIFFERENT DEVICES */
-@media (max-width: 380px) {
-    h1 { font-size: 28px; }
-    .call-avatar-container { width: 160px; height: 160px; }
-    .call-controls { gap: 15px; }
-    .control-btn { width: 55px; height: 55px; }
-    .control-btn.end-call { width: 65px; height: 65px; }
-}
-
-@media (min-width: 768px) {
-    .card { max-width: 350px; }
-    .btn-primary { max-width: 400px; }
-}
-
-/* REMOVE CAMERA ICON */
 .chat-input-area button i.fa-camera,
-.chat-input-area button i.fa-image,
-.chat-input-area .camera-btn,
-.chat-input-area .image-btn {
+.chat-input-area button i.fa-image {
     display: none !important;
+}
+
+/* TYPING BUBBLE STYLES */
+.typing {
+    display: flex !important;
+    align-items: center;
+    gap: 5px;
+    padding: 15px 20px !important;
+    width: fit-content;
+    min-height: 45px;
+}
+
+.dot {
+    width: 7px;
+    height: 7px;
+    background: #ffffff; /* Color of the dots */
+    border-radius: 50%;
+    opacity: 0.4;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); opacity: 1; }
 }
