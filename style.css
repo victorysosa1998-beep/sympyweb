@@ -225,6 +225,8 @@ input { flex: 1; background: transparent; border: none; color: white; padding: 1
 }
 .vibe-chip.active { background: var(--accent-blue); border: 1px solid rgba(255,255,255,0.5); }
 
+/* ... existing code ... */
+
 /* CALL OVERLAY FIX */
 #call-overlay {
     position: fixed;
@@ -234,13 +236,14 @@ input { flex: 1; background: transparent; border: none; color: white; padding: 1
     height: 100vh;
     z-index: 1000;
     background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
-    display: flex;
+    display: none; /* Changed from flex to none */
     flex-direction: column;
-    align-items: center;      /* center everything */
-    justify-content: center;   /* vertical center */
+    align-items: center;      
+    justify-content: center;   
     padding: 40px 20px 60px;
 }
 
+/* ... rest of the code ... */
 .call-content-wrapper {
     display: flex;
     flex-direction: column;
