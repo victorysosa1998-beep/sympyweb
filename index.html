@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sympy - Meet your companion</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+</head>
+<body>
+    <div class="gradient-bg"></div>
+
+    <section id="voice-screen" class="screen active">
+        <div class="container">
+            <i class="fas fa-magic logo-icon"></i>
+            <h1>Sympy</h1>
+            <p class="subtitle">Meet your companion!</p>
+            
+            <div class="selection-grid">
+                <div class="card selected" onclick="selectVoice('female', 'assets/images/missy.png')">
+                    <div class="avatar-ring">
+                        <img src="assets/images/missy.png" alt="Missy" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <h3>Missy</h3>
+                    <span>Female</span>
+                </div>
+            </div>
+            <button class="btn-primary pulse" onclick="navigateTo('mood-screen')">Next</button>
+        </div>
+    </section>
+
+    <section id="mood-screen" class="screen">
+        <div class="container">
+            <i class="fas fa-magic logo-icon"></i>
+            <h1>Sympy</h1>
+            <p class="subtitle">Pick a vibe for your partner</p>
+            
+            <div class="vibe-container">
+                <div class="vibe-chip active" onclick="setVibe(this, 'Chaotic')">🤪 Chaotic</div>
+                <div class="vibe-chip" onclick="setVibe(this, 'Savage')">🧠 Savage</div>
+                <div class="vibe-chip" onclick="setVibe(this, 'Therapist')">🧘 Calm</div>
+                <div class="vibe-chip" onclick="setVibe(this, 'Flirty')">😎 Flirty</div>
+            </div>
+
+            <button class="btn-primary gradient-btn pulse" onclick="navigateTo('chat-screen')">Get on Board</button>
+        </div>
+    </section>
+
+    <section id="chat-screen" class="screen">
+        <div class="chat-header">
+            <button class="back-btn" onclick="navigateTo('mood-screen')"><i class="fas fa-chevron-left"></i></button>
+            <div class="header-info">
+                <img id="chat-avatar" src="assets/images/missy.png" alt="Avatar">
+                <div>
+                    <h4 id="chat-name">Missy</h4>
+                    <span id="chat-status">Online</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <i class="fas fa-phone-alt" id="call-btn" onclick="startVoiceCall()" style="cursor: pointer;"></i>
+            </div>
+        </div>
+
+        <div id="chat-messages" class="chat-body"></div>
+
+        <div class="chat-input-area">
+            <div class="input-wrapper">
+                <button class="icon-btn"><i class="far fa-image"></i></button>
+                <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </section>
+
+    <section id="call-overlay" class="screen">
+        <div class="call-container">
+            <div class="call-timer" id="call-duration">00:00</div>
+            <div class="call-avatar-container">
+                <div class="pulse-ring"></div>
+                <img src="assets/images/missy.png" class="call-avatar" alt="Missy">
+            </div>
+            <h2 id="calling-name">Missy</h2>
+            <p id="call-status-text">Connecting...</p>
+            
+            <div class="call-controls">
+                <button class="control-btn" id="mute-btn" onclick="toggleMute()"><i class="fas fa-microphone"></i></button>
+                <button class="control-btn end-call" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>
+                <button class="control-btn" id="speaker-btn" onclick="toggleSpeaker()"><i class="fas fa-volume-up"></i></button>
+            </div>
+        </div>
+    </section>
+
+    <div id="audio-container" style="display: none;"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
