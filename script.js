@@ -376,3 +376,13 @@ document.addEventListener("click", async () => {
 
 const inputEl = document.getElementById('user-input');
 if (inputEl) inputEl.addEventListener('keypress', handleKeyPress);
+// Automatically navigate to the voice screen if coming back from profile
+window.onload = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetScreen = urlParams.get('screen');
+    
+    // If the URL says ?screen=voice-screen, go there immediately
+    if (targetScreen) {
+        navigateTo(targetScreen);
+    }
+};
