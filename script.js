@@ -96,7 +96,6 @@ function showTypingIndicator() {
     const typingDiv = document.createElement('div');
     typingDiv.id = 'typing-indicator';
     typingDiv.className = 'message sympy typing';
-    // Three dots for the animation
     typingDiv.innerHTML = `
         <div class="dot"></div>
         <div class="dot"></div>
@@ -123,7 +122,6 @@ async function sendMessage() {
     addMessage("user", messageText);
     input.value = '';
 
-    // START TYPING ANIMATION
     showTypingIndicator();
 
     const url = `${BASE_URL}/chat?voice=${selectedVoice}&vibe=${currentVibe}`;
@@ -139,8 +137,6 @@ async function sendMessage() {
         });
 
         const data = await response.json();
-        
-        // STOP TYPING ANIMATION
         hideTypingIndicator();
         addMessage("sympy", data.reply);
     } catch (e) {
@@ -162,7 +158,7 @@ async function __unlockAudioOnce() {
         silentAudio.playsInline = true;
         await silentAudio.play();
         __audioUnlocked = true;
-        console.log("[CALL FIX] Microphone unlocked via User Gesture");
+        console.log("[CALL FIX] Microphone unlocked");
     } catch (err) {
         console.warn("[CALL FIX] Audio unlock blocked:", err);
     }
@@ -295,7 +291,75 @@ function handleKeyPress(e) {
 }
 
 // =======================
-// MAIN CALL BUTTON PATCH
+// Firebase Initialization
+// =======================
+const firebaseConfig = {
+    apiKey: "AIzaSyDXTMsESWcJCzDMItxzQhVrPfnQXUDs8RY",
+    authDomain: "sympy-ai.firebaseapp.com",
+    projectId: "sympy-ai",
+    storageBucket: "sympy-ai.firebasestorage.app",
+    messagingSenderId: "949064788583",
+    appId: "1:949064788583:web:9a63685807881b4da4c2c2",
+    measurementId: "G-SBY8GEKMZT"
+};
+firebase.initializeApp(firebaseConfig);
+
+// =======================
+// Authentication Handlers
+// =======================
+async function handleLogin() {
+    const email = document.getElementById('login-email').value;
+    const pass = document.getElementById('login-password').value;
+    const btn = document.getElementById('login-btn');
+
+    if (!email || !pass) { alert("Please fill all fields"); return; }
+    btn.innerText = "Authenticating...";
+    btn.disabled = true;
+
+    try {
+        const cred = await firebase.auth().signInWithEmailAndPassword(email, pass);
+        if (!cred.user.emailVerified) {
+            alert("Please verify your email first.");
+            await firebase.auth().signOut();
+        } else {
+            navigateTo('voice-screen');
+        }
+    } catch (e) { alert(e.message); }
+    btn.innerText = "Login"; btn.disabled = false;
+}
+
+async function handleSignup() {
+    const name = document.getElementById('signup-name').value;
+    const email = document.getElementById('signup-email').value;
+    const pass = document.getElementById('signup-password').value;
+    const btn = document.getElementById('signup-btn');
+
+    if (!name || !email || !pass) { alert("Please fill all fields"); return; }
+    btn.innerText = "Creating Account...";
+    btn.disabled = true;
+
+    try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+        await cred.user.updateProfile({ displayName: name });
+        await cred.user.sendEmailVerification();
+        alert("Verification link sent! Check your email.");
+        navigateTo('login-screen');
+    } catch (e) { alert(e.message); }
+    btn.innerText = "Sign Up"; btn.disabled = false;
+}
+
+async function handleResetPassword() {
+    const email = document.getElementById('reset-email').value;
+    if (!email) { alert("Enter your email"); return; }
+    try {
+        await firebase.auth().sendPasswordResetEmail(email);
+        alert("Reset link sent!");
+        navigateTo('login-screen');
+    } catch (e) { alert(e.message); }
+}
+
+// =======================
+// Event Listeners
 // =======================
 const mainCallBtn = document.getElementById('call-btn');
 if (mainCallBtn) {
