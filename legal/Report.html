@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report an Issue — Sympy</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="legal.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<div class="gradient-bg"></div>
+<div class="wrap">
+
+  <nav>
+    <a href="../index.html" class="logo"><i class="fas fa-magic"></i> Sympy</a>
+    <a href="support.html" class="back-link"><i class="fas fa-chevron-left"></i> Support</a>
+  </nav>
+
+  <div class="hero">
+    <div class="badge" style="background:rgba(255,68,68,0.1);border-color:rgba(255,68,68,0.25);color:#ff4444;">
+      <span class="badge-dot" style="background:#ff4444;animation:none;"></span> Report
+    </div>
+    <h1>Report an Issue</h1>
+    <p>Found a bug or something broken? Tell us and we'll fix it fast.</p>
+  </div>
+
+  <form id="reportForm" onsubmit="submitForm(event)">
+
+    <div class="field">
+      <label>What type of issue? <span style="color:#ff4444">*</span></label>
+      <div class="type-grid" id="typeGrid">
+        <div class="type-card selected" onclick="selectType(this,'bug')">
+          <span class="type-icon">🐛</span>
+          <div><div class="type-text">Bug / Error</div><div class="type-sub">Something crashed</div></div>
+        </div>
+        <div class="type-card" onclick="selectType(this,'ai')">
+          <span class="type-icon">🤖</span>
+          <div><div class="type-text">AI Behaviour</div><div class="type-sub">Wrong responses</div></div>
+        </div>
+        <div class="type-card" onclick="selectType(this,'call')">
+          <span class="type-icon">📞</span>
+          <div><div class="type-text">Call Issue</div><div class="type-sub">Voice call problems</div></div>
+        </div>
+        <div class="type-card" onclick="selectType(this,'account')">
+          <span class="type-icon">👤</span>
+          <div><div class="type-text">Account / Login</div><div class="type-sub">Can't sign in</div></div>
+        </div>
+        <div class="type-card" onclick="selectType(this,'memory')">
+          <span class="type-icon">🧠</span>
+          <div><div class="type-text">Memory Issue</div><div class="type-sub">AI forgot me</div></div>
+        </div>
+        <div class="type-card" onclick="selectType(this,'other')">
+          <span class="type-icon">💬</span>
+          <div><div class="type-text">Other</div><div class="type-sub">Something else</div></div>
+        </div>
+      </div>
+      <input type="hidden" id="selectedType" value="bug">
+    </div>
+
+    <div class="field">
+      <label>How severe is it?</label>
+      <div class="sev-row">
+        <div class="sev-btn" onclick="selectSev(this,'low')">🟢 Minor</div>
+        <div class="sev-btn active" onclick="selectSev(this,'med')">🟠 Moderate</div>
+        <div class="sev-btn" onclick="selectSev(this,'high')">🔴 Critical</div>
+      </div>
+      <input type="hidden" id="selectedSev" value="med">
+    </div>
+
+    <div class="field">
+      <label for="title">Issue title <span style="color:#ff4444">*</span></label>
+      <input type="text" id="title" placeholder="e.g. App crashes when I send an image" required>
+    </div>
+
+    <div class="field">
+      <label for="description">What happened? <span style="color:#ff4444">*</span></label>
+      <textarea id="description" placeholder="Describe the issue clearly. What did you expect? What actually happened?" required></textarea>
+    </div>
+
+    <div class="field">
+      <label>Steps to reproduce (optional)</label>
+      <div class="add-row">
+        <input type="text" id="stepInput" placeholder="e.g. Tap the camera icon...">
+        <button type="button" onclick="addStep()">+</button>
+      </div>
+      <ul class="step-list" id="stepList"></ul>
+    </div>
+
+    <div class="field">
+      <label for="device">Device & OS (optional)</label>
+      <input type="text" id="device" placeholder="e.g. Samsung Galaxy S24, Android 14">
+    </div>
+
+    <div class="field">
+      <label for="email">Your email <span style="color:#ff4444">*</span></label>
+      <input type="email" id="email" placeholder="so we can follow up" required>
+      <p class="hint">We'll only use this to respond to your report.</p>
+    </div>
+
+    <button type="submit" class="submit-btn">Submit Report →</button>
+  </form>
+
+  <div class="success" id="successState">
+    <div class="success-icon">✓</div>
+    <h2>Report Received!</h2>
+    <p>Thank you for helping us improve Sympy. We'll investigate and get back to you within 48 hours.</p>
+    <a href="support.html">Back to Support</a>
+  </div>
+
+  <div class="page-footer">
+    <p>© 2026 Sasa Technologies</p>
+    <div class="footer-links">
+      <a href="../index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="support.html">Support</a>
+    </div>
+  </div>
+
+</div>
+<script>
+let steps = [];
+
+function selectType(card, val) {
+  document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  document.getElementById('selectedType').value = val;
+}
+function selectSev(btn, val) {
+  document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('selectedSev').value = val;
+}
+function addStep() {
+  const input = document.getElementById('stepInput');
+  const val = input.value.trim();
+  if (!val) return;
+  steps.push(val);
+  renderSteps();
+  input.value = '';
+  input.focus();
+}
+document.getElementById('stepInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addStep(); }
+});
+function renderSteps() {
+  document.getElementById('stepList').innerHTML = steps.map((s, i) => `
+    <li>
+      <span class="step-num">${i + 1}</span>
+      ${s}
+      <span class="step-del" onclick="removeStep(${i})">×</span>
+    </li>
+  `).join('');
+}
+function removeStep(i) { steps.splice(i, 1); renderSteps(); }
+
+function submitForm(e) {
+  e.preventDefault();
+  const type = document.getElementById('selectedType').value;
+  const sev = document.getElementById('selectedSev').value;
+  const title = document.getElementById('title').value;
+  const desc = document.getElementById('description').value;
+  const device = document.getElementById('device').value;
+  const email = document.getElementById('email').value;
+  const body = encodeURIComponent(
+    `Type: ${type}\nSeverity: ${sev}\n\nTitle: ${title}\n\nDescription:\n${desc}\n\nSteps:\n${steps.map((s,i)=>`${i+1}. ${s}`).join('\n') || 'None'}\n\nDevice: ${device || 'Not provided'}\nEmail: ${email}`
+  );
+  window.location.href = `mailto:support@sympyapp.com?subject=Bug Report: ${encodeURIComponent(title)}&body=${body}`;
+  setTimeout(() => {
+    document.getElementById('reportForm').style.display = 'none';
+    document.getElementById('successState').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 500);
+}
+</script>
+</body>
+</html>

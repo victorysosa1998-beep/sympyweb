@@ -3,175 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sympy - Meet your companion</title>
+    <title>Sympy — Meet your companion</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
 </head>
 <body>
-    <div class="gradient-bg"></div>
+<div class="gradient-bg"></div>
 
-    <section id="login-screen" class="screen active">
-        <div class="container">
-            <div class="auth-card">
-                <i class="fas fa-magic logo-icon"></i>
-                <h1 class="auth-title">Welcome</h1>
-                <p class="subtitle">Log in to your companion</p>
-                <div class="auth-form">
-                    <div class="input-group">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="login-email" placeholder="Email" autocomplete="email">
-                    </div>
-                    <div class="input-group">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
-                    </div>
-                    <p class="clickable-text forgot-pass" onclick="navigateTo('forgot-password-screen')">Forgot Password?</p>
-                    <button class="btn-primary" id="login-btn" onclick="handleLogin()">
-                        <span class="btn-text">Login</span>
-                        <div class="loader" style="display: none;"></div>
-                    </button>
-                    <p class="auth-switch">New here? <span class="clickable-text" onclick="navigateTo('signup-screen')">Create Account</span></p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="signup-screen" class="screen">
-        <div class="container">
-            <div class="auth-card">
-                <h1 class="auth-title">Join Sympy</h1>
-                <p class="subtitle">Start your AI journey</p>
-                <div class="auth-form">
-                    <div class="input-group">
-                        <i class="fas fa-user"></i>
-                        <input type="text" id="signup-name" placeholder="Full Name">
-                    </div>
-                    <div class="input-group">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="signup-email" placeholder="Email">
-                    </div>
-                    <div class="input-group">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="signup-password" placeholder="Password">
-                    </div>
-                    <button class="btn-primary" id="signup-btn" onclick="handleSignup()">
-                        <span class="btn-text">Sign Up</span>
-                        <div class="loader" style="display: none;"></div>
-                    </button>
-                    <p class="auth-switch">Already have an account? <span class="clickable-text" onclick="navigateTo('login-screen')">Login</span></p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="forgot-password-screen" class="screen">
-        <div class="container">
-            <div class="auth-card">
-                <h1 class="auth-title">Reset</h1>
-                <p class="subtitle">We'll send a link to your email</p>
-                <div class="auth-form">
-                    <div class="input-group">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="reset-email" placeholder="Email Address">
-                    </div>
-                    <button class="btn-primary" id="reset-btn" onclick="handleResetPassword()">
-                        <span class="btn-text">Send Link</span>
-                        <div class="loader" style="display: none;"></div>
-                    </button>
-                    <button class="btn-secondary clickable-text" onclick="navigateTo('login-screen')">Back to Login</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-<section id="voice-screen" class="screen">
-    <div class="chat-header" style="background: transparent; position: absolute; top: 0; left: 0; width: 100%; z-index: 100; padding: 20px;">
-        <div class="header-info">
-            <div class="user-status">
-                <img src="assets/images/portrait-placeholder-removebg-preview.png" class="clickable-text" 
-                     style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid white; " 
-                     onclick="window.location.href='profile.html'">
-            </div>
+<!-- DRAWER OVERLAY -->
+<div id="drawer-overlay" onclick="closeDrawer()"></div>
+<div id="drawer">
+    <div class="drawer-header">
+        <div class="drawer-avatar-circle"><i class="fas fa-user"></i></div>
+        <div class="drawer-user-info">
+            <span id="drawer-name">Loading...</span>
+            <span id="drawer-email" class="drawer-email-text">...</span>
         </div>
     </div>
+    <div class="drawer-quota-box">
+        <div class="dq-row">
+            <i class="fas fa-clock" style="color:var(--accent-blue);font-size:13px;"></i>
+            <span style="font-size:12px;color:rgba(255,255,255,0.55);">Daily call remaining</span>
+            <strong id="drawer-time-left" style="margin-left:auto;color:var(--accent-blue);font-size:13px;">5:00</strong>
+        </div>
+        <div class="dq-bar"><div class="dq-bar-fill" id="drawer-quota-bar" style="width:0%"></div></div>
+        <span id="drawer-reset-label" style="font-size:10px;color:rgba(255,255,255,0.25);">Resets at midnight UTC</span>
+    </div>
+    <div class="drawer-divider"></div>
+    <a href="profile.html" class="drawer-item"><i class="fas fa-user-circle"></i> My Profile</a>
+    <div class="drawer-item" onclick="closeDrawer();navigateTo('voice-screen')"><i class="fas fa-home"></i> Home</div>
+    <div class="drawer-divider"></div>
+    <a href="legal/privacy.html" class="drawer-item"><i class="fas fa-shield-alt"></i> Privacy Policy</a>
+    <a href="legal/terms.html" class="drawer-item"><i class="fas fa-file-alt"></i> Terms of Service</a>
+    <a href="legal/support.html" class="drawer-item"><i class="fas fa-question-circle"></i> Support & FAQ</a>
+    <a href="legal/report.html" class="drawer-item"><i class="fas fa-flag"></i> Report an Issue</a>
+    <div class="drawer-divider"></div>
+    <div class="drawer-item drawer-danger" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Logout</div>
+    <div class="drawer-footer-text">Sympy v1.0.0 · Sasa Technologies</div>
+</div>
 
-    <div class="container" style="padding-top: 80px;"> <i class="fas fa-magic logo-icon"></i>
-        <h1>Sympy</h1>
-        <p class="subtitle">Meet your companion!</p>
-        <div class="selection-grid">
-            <div class="card selected clickable-text" onclick="selectVoice('female', 'assets/images/missy.png')">
-                <div class="avatar-ring">
-                    <img src="assets/images/missy.png" alt="Missy" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-                <h3>Missy</h3>
-                <span>Female</span>
+<!-- IMAGE PREVIEW OVERLAY -->
+<div id="image-preview-overlay">
+    <div class="img-preview-card">
+        <div class="img-preview-header">
+            <span>Send Image</span>
+            <button class="img-close-btn" onclick="cancelImage()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="img-preview-body">
+            <img id="preview-img" src="" alt="Preview">
+        </div>
+        <div class="img-caption-row">
+            <input type="text" id="image-caption" placeholder="Add a caption..." onkeypress="if(event.key==='Enter')sendImageMessage()">
+            <button class="send-btn" onclick="sendImageMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+</div>
+<input type="file" id="image-file-input" accept="image/*" style="display:none" onchange="handleImageSelected(event)">
+
+<!-- ── LOGIN ── -->
+<section id="login-screen" class="screen active">
+    <div class="container">
+        <div class="auth-card">
+            <i class="fas fa-magic logo-icon"></i>
+            <h1 class="auth-title">Welcome Back</h1>
+            <p class="subtitle">Log in to your companion</p>
+            <div class="auth-form">
+                <div class="input-group"><i class="fas fa-envelope"></i><input type="email" id="login-email" placeholder="Email" autocomplete="email"></div>
+                <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="login-password" placeholder="Password" autocomplete="current-password"></div>
+                <p class="clickable-text forgot-pass" onclick="navigateTo('forgot-password-screen')">Forgot Password?</p>
+                <button class="btn-primary gradient-btn" id="login-btn" onclick="handleLogin()">
+                    <span class="btn-text">Login</span><div class="loader" style="display:none;"></div>
+                </button>
+                <p class="auth-switch">New here? <span class="clickable-text" onclick="navigateTo('signup-screen')">Create Account</span></p>
             </div>
         </div>
-        <button class="btn-primary pulse clickable-text" onclick="navigateTo('vibe-screen')">Next</button>
     </div>
 </section>
 
-    <section id="vibe-screen" class="screen">
-        <div class="container">
-            <h1>Select Vibe</h1>
-            <p class="subtitle">How should I act today?</p>
-            <div class="vibe-grid">
-                <div class="vibe-chip active clickable-text" onclick="setVibe(this, 'Chaotic')">Chaotic</div>
-                <div class="vibe-chip clickable-text" onclick="setVibe(this, 'Professional')">Professional</div>
-                <div class="vibe-chip clickable-text" onclick="setVibe(this, 'Sweet')">Sweet</div>
+<!-- ── SIGNUP ── -->
+<section id="signup-screen" class="screen">
+    <div class="container">
+        <div class="auth-card">
+            <i class="fas fa-magic logo-icon"></i>
+            <h1 class="auth-title">Join Sympy</h1>
+            <p class="subtitle">Start your AI journey</p>
+            <div class="auth-form">
+                <div class="input-group"><i class="fas fa-user"></i><input type="text" id="signup-name" placeholder="Full Name"></div>
+                <div class="input-group"><i class="fas fa-envelope"></i><input type="email" id="signup-email" placeholder="Email"></div>
+                <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="signup-password" placeholder="Password"></div>
+                <button class="btn-primary gradient-btn" id="signup-btn" onclick="handleSignup()">
+                    <span class="btn-text">Sign Up</span><div class="loader" style="display:none;"></div>
+                </button>
+                <p class="auth-switch">Already have an account? <span class="clickable-text" onclick="navigateTo('login-screen')">Login</span></p>
             </div>
-            <button class="btn-primary pulse clickable-text" onclick="navigateTo('chat-screen')">Start Chatting</button>
         </div>
-    </section>
+    </div>
+</section>
 
-    <section id="chat-screen" class="screen">
-        <div class="chat-header">
-            <div class="header-info">
-                <button class="back-btn clickable-text" onclick="navigateTo('voice-screen')"><i class="fas fa-chevron-left"></i></button>
-               <img id="chat-avatar" class="clickable-text" src="assets/images/missy.png" alt="Avatar" onclick="window.location.href='profile.html'">
-                <div style="text-align: left;">
-                    <h4 id="chat-name">Missy</h4>
-                    <span style="font-size: 12px; color: #4CAF50;">Online</span>
+<!-- ── FORGOT PASSWORD ── -->
+<section id="forgot-password-screen" class="screen">
+    <div class="container">
+        <div class="auth-card">
+            <i class="fas fa-key logo-icon"></i>
+            <h1 class="auth-title">Reset Password</h1>
+            <p class="subtitle">We'll send a reset link to your email</p>
+            <div class="auth-form">
+                <div class="input-group"><i class="fas fa-envelope"></i><input type="email" id="reset-email" placeholder="Email Address"></div>
+                <button class="btn-primary gradient-btn" id="reset-btn" onclick="handleResetPassword()">
+                    <span class="btn-text">Send Link</span><div class="loader" style="display:none;"></div>
+                </button>
+                <button class="btn-secondary clickable-text" onclick="navigateTo('login-screen')">Back to Login</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── VOICE SELECTION ── -->
+<section id="voice-screen" class="screen">
+    <div class="voice-topbar">
+        <button class="topbar-menu-btn" onclick="openDrawer()"><i class="fas fa-bars"></i></button>
+        <div class="topbar-logo"><i class="fas fa-magic"></i> Sympy</div>
+        <img id="voice-profile-pic" src="assets/images/portrait-placeholder-removebg-preview.png"
+             class="topbar-avatar clickable-text" onclick="window.location.href='profile.html'"
+             onerror="this.style.display='none'">
+    </div>
+    <div class="container" style="padding-top:90px;">
+        <p class="subtitle" style="margin-bottom:8px;">Meet your companion!</p>
+        <div class="selection-grid">
+            <div class="card selected clickable-text" id="card-missy" onclick="selectVoice('female','assets/images/missy.png','Missy')">
+                <div class="avatar-ring"><img src="assets/images/missy.png" alt="Missy" style="width:100%;height:100%;object-fit:cover;"></div>
+                <h3>Missy</h3><span>Female</span>
+            </div>
+            <div class="card clickable-text" id="card-buddy" onclick="selectVoice('male','assets/images/buddy.png','Buddy')">
+                <div class="avatar-ring"><img src="assets/images/buddy.png" alt="Buddy" style="width:100%;height:100%;object-fit:cover;"></div>
+                <h3>Buddy</h3><span>Male</span>
+            </div>
+        </div>
+        <div class="daily-limit-card">
+            <div class="limit-icon"><i class="fas fa-clock"></i></div>
+            <div class="limit-info">
+                <span class="limit-title">5 min free call · daily</span>
+                <span class="limit-sub">Resets at midnight UTC</span>
+            </div>
+        </div>
+        <button class="btn-primary gradient-btn pulse clickable-text" onclick="navigateTo('vibe-screen')">Next &rarr;</button>
+    </div>
+</section>
+
+<!-- ── VIBE SELECTION ── -->
+<section id="vibe-screen" class="screen">
+    <div class="container">
+        <button class="vibe-back-btn clickable-text" onclick="navigateTo('voice-screen')"><i class="fas fa-chevron-left"></i></button>
+        <i class="fas fa-magic logo-icon" style="margin-top:32px;"></i>
+        <h1>Select Vibe</h1>
+        <p class="subtitle">How should I act today?</p>
+        <div class="vibe-grid">
+            <div class="vibe-chip active clickable-text" onclick="setVibe(this,'Chaotic')">🔥 Chaotic</div>
+            <div class="vibe-chip clickable-text" onclick="setVibe(this,'Savage')">😈 Savage</div>
+            <div class="vibe-chip clickable-text" onclick="setVibe(this,'Therapist')">💙 Therapist</div>
+            <div class="vibe-chip clickable-text" onclick="setVibe(this,'Flirty')">😏 Flirty</div>
+        </div>
+        <button class="btn-primary gradient-btn pulse clickable-text" onclick="navigateTo('chat-screen')">Start Chatting</button>
+    </div>
+</section>
+
+<!-- ── CHAT SCREEN ── -->
+<section id="chat-screen" class="screen">
+    <div class="chat-header">
+        <div class="header-info">
+            <button class="back-btn clickable-text" onclick="navigateTo('voice-screen')"><i class="fas fa-chevron-left"></i></button>
+            <img id="chat-avatar" class="chat-avatar-img clickable-text" src="assets/images/missy.png" alt="Avatar" onclick="window.location.href='profile.html'">
+            <div style="text-align:left;">
+                <h4 id="chat-name">Missy</h4>
+                <div style="display:flex;align-items:center;gap:5px;">
+                    <span class="online-dot"></span>
+                    <span style="font-size:11px;color:#4CAF50;">Online</span>
                 </div>
             </div>
-            <div class="header-actions">
-                <button id="call-btn" class="clickable-text"><i class="fas fa-phone"></i></button>
-
-            </div>
         </div>
-        <div class="chat-body" id="chat-messages"></div>
-        <div class="chat-input-area">
-            <div class="input-wrapper">
-                <button class="icon-btn clickable-text"><i class="far fa-image"></i></button>
-                <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
-                <button class="send-btn clickable-text" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
-            </div>
+        <div class="header-actions">
+            <button id="call-btn" class="header-call-btn clickable-text"><i class="fas fa-phone"></i></button>
+            <button class="header-menu-btn clickable-text" onclick="openDrawer()"><i class="fas fa-bars"></i></button>
         </div>
-    </section>
+    </div>
+    <div class="chat-body" id="chat-messages"></div>
+    <div class="chat-input-area">
+        <div class="input-wrapper">
+            <button class="icon-btn clickable-text" onclick="triggerImagePicker()" title="Send image">
+                <i class="far fa-image"></i>
+            </button>
+            <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+            <button class="send-btn clickable-text" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+</section>
 
-    <section id="call-overlay" class="screen">
-        <div class="call-container">
+<!-- ── CALL OVERLAY ── -->
+<section id="call-overlay" class="screen">
+    <div class="call-bg" id="call-bg"></div>
+    <div class="call-container">
+        <div class="call-top-row">
+            <div class="call-live-badge">
+                <span class="call-live-dot" id="call-live-dot"></span>
+                <span id="call-status-text" style="font-size:12px;font-weight:600;">Connecting...</span>
+            </div>
             <div class="call-timer" id="call-duration">00:00</div>
-            <div class="call-avatar-container">
-                <div class="pulse-ring"></div>
-                <img src="assets/images/missy.png" class="call-avatar" alt="Missy">
+            <div class="call-quota-pill">
+                <i class="fas fa-clock" style="font-size:10px;"></i>
+                <span id="call-time-left" style="font-size:12px;font-weight:600;">5:00</span>
             </div>
-            <h2 id="calling-name">Missy</h2>
-            <p id="call-status-text">Connecting...</p>
-            <div class="call-controls">
-                <button class="control-btn clickable-text" id="mute-btn" onclick="toggleMute()"><i class="fas fa-microphone"></i></button>
-                <button class="control-btn end-call clickable-text" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>
-                <button class="control-btn clickable-text" id="speaker-btn" onclick="toggleSpeaker()"><i class="fas fa-volume-up"></i></button>
-            </div>
-            <div id="audio-container"></div>
         </div>
-    </section>
+        <div class="call-avatar-wrap">
+            <div class="call-pulse-ring r1"></div>
+            <div class="call-pulse-ring r2"></div>
+            <div class="call-pulse-ring r3"></div>
+            <img id="call-avatar-img" src="assets/images/missy.png" class="call-avatar" alt="">
+        </div>
+        <h2 id="calling-name" class="call-ai-name">Missy</h2>
+        <p class="call-vibe-tag" id="call-vibe-tag">Vibe · Chaotic</p>
+        <div class="call-wave" id="call-wave">
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+        </div>
+        <div class="call-controls">
+            <div class="ctrl-wrap">
+                <button class="control-btn clickable-text" id="mute-btn" onclick="toggleMute()"><i class="fas fa-microphone"></i></button>
+                <span class="ctrl-label">Mute</span>
+            </div>
+            <div class="ctrl-wrap">
+                <button class="control-btn end-call clickable-text" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>
+                <span class="ctrl-label">End</span>
+            </div>
+            <div class="ctrl-wrap">
+                <button class="control-btn clickable-text" id="speaker-btn" onclick="toggleSpeaker()"><i class="fas fa-volume-up"></i></button>
+                <span class="ctrl-label">Speaker</span>
+            </div>
+        </div>
+    </div>
+    <div id="audio-container" style="display:none;"></div>
+</section>
 
-    <script src="script.js"></script>
+<!-- LEGAL FOOTER (auth screens only) -->
+<div id="site-footer">
+    <a href="../privacy.html">Privacy</a><span>·</span>
+    <a href="../terms.html">Terms</a><span>·</span>
+    <a href="../support.html">Support</a><span>·</span>
+    <a href="../report.html">Report</a>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>

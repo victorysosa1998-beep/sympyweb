@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support & FAQ — Sympy</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="legal.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<div class="gradient-bg"></div>
+<div class="wrap">
+
+  <nav>
+    <a href="../index.html" class="logo"><i class="fas fa-magic"></i> Sympy</a>
+    <a href="../index.html" class="back-link"><i class="fas fa-chevron-left"></i> Back</a>
+  </nav>
+
+  <div class="hero">
+    <div class="badge"><span class="badge-dot"></span> Help Centre</div>
+    <h1>Support & FAQ</h1>
+    <p>Everything you need to know about Sympy. Can't find your answer? We're here.</p>
+  </div>
+
+  <div class="search-wrap">
+    <i class="fas fa-search search-icon"></i>
+    <input class="search-input" type="text" placeholder="Search for help..." oninput="filterFAQ(this.value)">
+  </div>
+
+  <!-- GETTING STARTED -->
+  <div class="cat-label">Getting Started</div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">What is Sympy?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>Sympy is your Nigerian AI bestie — a conversational AI companion that speaks your language, understands Pidgin, remembers your name and preferences, and can chat by text, analyse images, or call you for real-time voice conversations.</p></div>
+  </div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">How do I choose between Buddy and Missy?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>On the home screen, choose your companion. Buddy is your Nigerian guy — sharp, warm, and funny. Missy is your Nigerian girl — confident, smart, and witty. You also pick a vibe: Chaotic, Savage, Therapist, or Flirty.</p></div>
+  </div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">Does Sympy understand Pidgin?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>Yes! Sympy fully speaks and understands Nigerian Pidgin. Just say "I prefer Pidgin" or start typing in Pidgin and it will match your language. It also knows hundreds of Nigerian slangs — "sapa", "e choke", "you don fuckup", "chop breakfast", "shege pro max", and more.</p></div>
+  </div>
+
+  <!-- CALLS -->
+  <div class="cat-label">Voice Calls</div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">Why can I only call for 5 minutes per day?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>The free tier includes 5 minutes of voice call time per day. This resets at midnight UTC every day. You can see your remaining time on your Profile page. We're working on premium plans with more call time.</p></div>
+  </div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">When does my daily call time reset?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>Your 5 minutes resets at midnight UTC every day. For Nigeria (WAT, UTC+1), that's 1:00 AM your local time. Your Profile page shows exactly how much time is left and when it resets.</p></div>
+  </div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">The call disconnected — will my time still be counted?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>Only the time you were actually connected is counted. If the call drops unexpectedly, the app saves your usage and reports it on your next session. Contact support if you believe time was incorrectly deducted.</p></div>
+  </div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">The AI keeps asking my name on every call.</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>Your name is saved to your account. If it keeps asking, try logging out and back in to refresh your account connection. Once the AI learns your name from any chat or call, it will remember it going forward.</p></div>
+  </div>
+
+  <!-- MEMORY -->
+  <div class="cat-label">Memory & AI</div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">Does Sympy remember past conversations?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>Yes. Sympy builds a memory of your name, language preference, topics discussed, and your general vibe. Memory persists for 30 days. You'll see a "Last chat" or "Last call" summary banner at the top of the chat screen when you return.</p></div>
+  </div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">Can I change my name with the AI?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>Yes. Just say "call me [new name]" or "my name is [name]" at any point and the AI will update your name going forward. For example: "Actually, my name is Tunde."</p></div>
+  </div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">Can Sympy search the internet?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>Yes. Ask about dollar rates, fuel prices, news, weather, sports scores — Sympy searches online and responds with real-time Nigerian context. Try: "wetin be dollar rate today?" or "what's happening in Nigeria?"</p></div>
+  </div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">What happens when I send an image?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>Tap the camera icon, pick or take a photo, optionally add a caption, then send. Sympy will describe what it sees, read text in the image, identify products, or answer your specific question. Images are not stored after processing.</p></div>
+  </div>
+
+  <!-- ACCOUNT -->
+  <div class="cat-label">Account & Data</div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">How do I delete my account?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>Email <a href="mailto:support@sympyapp.com">support@sympyapp.com</a> with your registered email and request "Account Deletion." We'll permanently delete your account and all data within 30 days.</p></div>
+  </div>
+
+  <div class="faq" onclick="toggleFAQ(this)">
+    <div class="faq-q"><span class="faq-q-text">Is my data shared with anyone?</span><span class="faq-arrow">▼</span></div>
+    <div class="faq-a"><p>No. We never sell your data. Conversations are processed by OpenAI to generate responses, but we don't share your data with third parties for advertising. Read our <a href="privacy.html">Privacy Policy</a> for full details.</p></div>
+  </div>
+
+  <!-- Contact -->
+  <div class="cat-label">Still Need Help?</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:40px;">
+    <div class="contact-card" style="margin:0;">
+      <h3>✉️ Email Us</h3>
+      <p>We respond within 24-48 hours.</p>
+      <a href="mailto:support@sympyapp.com" class="contact-btn">Email Support</a>
+    </div>
+    <div class="contact-card" style="margin:0;">
+      <h3>🐛 Report Bug</h3>
+      <p>Found something broken?</p>
+      <a href="report.html" class="contact-btn">Report Issue</a>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <p>© 2026 Sasa Technologies</p>
+    <div class="footer-links">
+      <a href="../index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="report.html">Report</a>
+    </div>
+  </div>
+
+</div>
+<script>
+function toggleFAQ(el) {
+  const was = el.classList.contains('open');
+  document.querySelectorAll('.faq.open').forEach(f => f.classList.remove('open'));
+  if (!was) el.classList.add('open');
+}
+function filterFAQ(q) {
+  const t = q.toLowerCase();
+  document.querySelectorAll('.faq').forEach(f => {
+    f.style.display = (!t || f.textContent.toLowerCase().includes(t)) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>
