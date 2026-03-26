@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
 </head>
 <body class="app-page">
@@ -25,12 +26,16 @@
     </div>
     <div class="drawer-quota-box">
         <div class="dq-row">
-            <i class="fas fa-clock" style="color:var(--accent-blue);font-size:13px;"></i>
-            <span style="font-size:12px;color:rgba(255,255,255,0.55);">Daily call remaining</span>
-            <strong id="drawer-time-left" style="margin-left:auto;color:var(--accent-blue);font-size:13px;">5:00</strong>
+            <i class="fas fa-bolt" style="color:var(--accent-blue);font-size:13px;"></i>
+            <span style="font-size:12px;color:rgba(255,255,255,0.55);">Credits remaining</span>
+            <strong id="drawer-time-left" style="margin-left:auto;color:var(--accent-blue);font-size:13px;">—</strong>
         </div>
         <div class="dq-bar"><div class="dq-bar-fill" id="drawer-quota-bar" style="width:0%"></div></div>
-        <span id="drawer-reset-label" style="font-size:10px;color:rgba(255,255,255,0.25);">Resets at midnight UTC</span>
+        <span id="drawer-reset-label" style="font-size:10px;color:rgba(255,255,255,0.25);">Free 5 mins daily · resets at midnight UTC</span>
+    </div>
+    <!-- Top Up button -->
+    <div style="margin:4px 16px 4px;padding:10px 14px;background:rgba(123,47,247,0.08);border:1px solid rgba(123,47,247,0.2);border-radius:14px;cursor:pointer;text-align:center;" onclick="closeDrawer();navigateTo('upgrade-screen')">
+        <span style="font-size:13px;font-weight:bold;color:#a855f7;">⚡ Top Up Credits</span>
     </div>
     <div class="drawer-divider"></div>
     <a href="profile.html" class="drawer-item"><i class="fas fa-user-circle"></i> My Profile</a>
@@ -212,8 +217,8 @@
             </div>
             <div class="call-timer" id="call-duration">00:00</div>
             <div class="call-quota-pill">
-                <i class="fas fa-clock" style="font-size:10px;"></i>
-                <span id="call-time-left" style="font-size:12px;font-weight:600;">5:00</span>
+                <i class="fas fa-bolt" style="font-size:10px;"></i>
+                <span id="call-time-left" style="font-size:12px;font-weight:600;">— credits</span>
             </div>
         </div>
         <div class="call-avatar-wrap">
@@ -254,6 +259,109 @@
     <a href="support.html">Support</a><span>·</span>
     <a href="report.html">Report</a>
 </div>
+
+<!-- ── UPGRADE / TOP UP SCREEN ── -->
+<section id="upgrade-screen" class="screen">
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,#060714,#0d0d2b,#060714);z-index:0;"></div>
+    <div style="position:absolute;top:-80px;right:-80px;width:300px;height:300px;border-radius:50%;background:rgba(168,85,247,0.08);z-index:0;"></div>
+    <div style="position:absolute;bottom:80px;left:-60px;width:220px;height:220px;border-radius:50%;background:rgba(68,138,255,0.06);z-index:0;"></div>
+    <div style="position:relative;z-index:1;width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;padding:52px 8px 8px;flex-shrink:0;">
+            <button onclick="navigateTo('voice-screen')" style="background:none;border:none;color:white;font-size:22px;padding:10px;cursor:pointer;"><i class="fas fa-chevron-left"></i></button>
+            <span style="flex:1;text-align:center;font-size:18px;font-weight:bold;">Top Up Credits</span>
+            <div style="width:44px;"></div>
+        </div>
+        <!-- Scrollable content -->
+        <div style="flex:1;overflow-y:auto;padding:4px 16px 120px;">
+            <!-- Info banner matching Flutter -->
+            <div style="margin-bottom:24px;padding:20px;border-radius:20px;background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(68,138,255,0.08));border:1px solid rgba(168,85,247,0.2);display:flex;align-items:flex-start;gap:16px;">
+                <div style="padding:12px;background:rgba(168,85,247,0.15);border-radius:14px;flex-shrink:0;"><i class="fas fa-bolt" style="color:#a855f7;font-size:22px;"></i></div>
+                <div>
+                    <div style="font-size:15px;font-weight:bold;color:white;margin-bottom:4px;">Credits are for voice calls only</div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.45);line-height:1.5;">Chat is free forever. 5 credits = 1 min voice call. Pay via bank transfer or USDT.</div>
+                </div>
+            </div>
+            <p style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:1.5px;font-weight:600;margin-bottom:12px;padding-left:4px;">CHOOSE A PACK</p>
+            <!-- Pack list -->
+            <div id="pack-grid"></div>
+            <!-- Security note -->
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                <i class="fas fa-lock" style="color:rgba(255,255,255,0.2);font-size:13px;"></i>
+                <span style="font-size:11px;color:rgba(255,255,255,0.25);">Manual verification · Credits added within 1 hour</span>
+            </div>
+        </div>
+        <!-- Bottom CTA — matches Flutter -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:16px 20px 24px;background:rgba(6,7,20,0.95);border-top:1px solid rgba(255,255,255,0.07);">
+            <button id="upgrade-cta-btn" onclick="proceedFromUpgrade()" style="width:100%;height:56px;border-radius:18px;border:none;font-size:15px;font-weight:bold;cursor:pointer;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);transition:all 0.2s;">Select a pack to continue</button>
+        </div>
+    </div>
+</section>
+
+<!-- ── PAYMENT METHOD SCREEN ── -->
+<section id="payment-method-screen" class="screen">
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,#060714,#0d0d2b,#060714);z-index:0;"></div>
+    <div style="position:relative;z-index:1;width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;padding:52px 8px 8px;">
+            <button onclick="navigateTo('upgrade-screen')" style="background:none;border:none;color:white;font-size:22px;padding:10px;cursor:pointer;"><i class="fas fa-chevron-left"></i></button>
+            <span style="flex:1;text-align:center;font-size:18px;font-weight:bold;">Payment Method</span>
+            <div style="width:44px;"></div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:16px 16px 120px;">
+            <!-- Order summary -->
+            <div id="pm-order-summary" style="padding:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:16px;display:flex;align-items:center;gap:12px;margin-bottom:28px;"></div>
+            <p style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:1.5px;font-weight:600;margin-bottom:14px;">HOW DO YOU WANT TO PAY?</p>
+            <!-- NGN -->
+            <div id="method-ngn" class="pm-card" onclick="selectPayMethod('ngn')" style="padding:16px;border-radius:16px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);cursor:pointer;margin-bottom:12px;display:flex;align-items:center;gap:14px;transition:all 0.2s;">
+                <div style="width:44px;height:44px;border-radius:12px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-university" style="color:#22c55e;font-size:20px;"></i></div>
+                <div style="flex:1;">
+                    <div style="font-size:14px;font-weight:600;color:white;display:flex;align-items:center;gap:8px;">Nigerian Bank Transfer <span style="font-size:9px;font-weight:bold;color:#22c55e;background:rgba(34,197,94,0.15);padding:2px 6px;border-radius:5px;">NGN</span></div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:3px;">Pay via bank transfer · Instant verification</div>
+                </div>
+                <div id="radio-ngn" style="width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;"></div>
+            </div>
+            <!-- USDT -->
+            <div id="method-usdt" class="pm-card" onclick="selectPayMethod('usdt')" style="padding:16px;border-radius:16px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);cursor:pointer;display:flex;align-items:center;gap:14px;transition:all 0.2s;">
+                <div style="width:44px;height:44px;border-radius:12px;background:rgba(38,161,123,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fab fa-bitcoin" style="color:#26a17b;font-size:20px;"></i></div>
+                <div style="flex:1;">
+                    <div style="font-size:14px;font-weight:600;color:white;display:flex;align-items:center;gap:8px;">USDT (TRC-20) <span style="font-size:9px;font-weight:bold;color:#26a17b;background:rgba(38,161,123,0.15);padding:2px 6px;border-radius:5px;">USDT</span></div>
+                    <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:3px;">Pay with Tether · Tron network only</div>
+                </div>
+                <div id="radio-usdt" style="width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;"></div>
+            </div>
+        </div>
+        <!-- CTA -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:16px;background:rgba(6,7,20,0.97);border-top:1px solid rgba(255,255,255,0.07);">
+            <button id="pm-continue-btn" onclick="proceedToPaymentDetails()" style="width:100%;height:56px;border-radius:18px;border:none;font-size:15px;font-weight:bold;cursor:pointer;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);transition:all 0.2s;">Select a payment method</button>
+        </div>
+    </div>
+</section>
+
+<!-- ── PAYMENT DETAILS SCREEN ── -->
+<section id="payment-details-screen" class="screen">
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,#060714,#0d0d2b,#060714);z-index:0;"></div>
+    <div style="position:relative;z-index:1;width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;padding:52px 8px 8px;">
+            <button onclick="navigateTo('payment-method-screen')" style="background:none;border:none;color:white;font-size:22px;padding:10px;cursor:pointer;"><i class="fas fa-chevron-left"></i></button>
+            <span style="flex:1;text-align:center;font-size:18px;font-weight:bold;">Payment Details</span>
+            <div style="width:44px;"></div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:8px 16px 160px;" id="pd-content"></div>
+        <!-- CTA -->
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:16px 16px 24px;background:rgba(6,7,20,0.97);border-top:1px solid rgba(255,255,255,0.07);">
+            <button id="pd-paid-btn" onclick="submitPayment()" style="width:100%;height:56px;border-radius:18px;border:none;font-size:15px;font-weight:bold;cursor:pointer;background:linear-gradient(135deg,#7b2ff7,#4776E6);color:white;display:flex;align-items:center;justify-content:center;gap:8px;"><span>I've Made the Payment  ✓</span><div class="loader" style="display:none;width:18px;height:18px;"></div></button>
+            <p style="text-align:center;font-size:11px;color:rgba(255,255,255,0.2);margin-top:8px;">Only tap after you have sent the payment</p>
+        </div>
+    </div>
+</section>
+
+<!-- ── PAYMENT PENDING SCREEN ── -->
+<section id="payment-pending-screen" class="screen">
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,#060714,#0d0d2b,#060714);z-index:0;"></div>
+    <div style="position:relative;z-index:1;width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;">
+        <div id="pending-body"></div>
+    </div>
+</section>
 
 <script src="script.js"></script>
 </body>

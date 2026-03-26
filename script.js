@@ -56,6 +56,7 @@ function navigateTo(screenId) {
     }
     if (screenId === 'chat-screen') startChat();
     if (screenId === 'voice-screen' && currentUserId) loadUserData();
+    if (screenId === 'upgrade-screen') renderPacks();
 }
 
 
@@ -89,10 +90,16 @@ async function updateDrawerQuota() {
         const limit     = data.limit ?? 300;
         dailySecondsLeft = remaining;
         const used = limit - remaining;
-        const m = String(Math.floor(remaining / 60)).padStart(2,'0');
-        const s = String(remaining % 60).padStart(2,'0');
-        document.getElementById('drawer-time-left').innerText  = m + ':' + s;
+
+        // Free daily minutes → credit equivalent (5 credits per minute)
+        const freeCreditsEquiv = Math.floor(remaining / 60) * 5;
+
+        // Combined total = purchased + free daily equivalent
+        const totalCredits = purchasedCredits + freeCreditsEquiv;
+
+        // Drawer quota bar (based on daily free time used)
         document.getElementById('drawer-quota-bar').style.width = Math.min((used / limit) * 100, 100) + '%';
+
         // Reset time label
         const now = new Date();
         const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
@@ -101,11 +108,21 @@ async function updateDrawerQuota() {
         const dm = Math.floor((diff % 3600000) / 60000);
         document.getElementById('drawer-reset-label').innerText =
             `Resets in ${dh}h ${String(dm).padStart(2,'0')}m`;
-        // Update call screen pill
-        document.getElementById('call-time-left').innerText = m + ':' + s;
-        if (remaining <= 30) {
-            document.getElementById('call-time-left').style.color = '#ff4444';
+
+        // Drawer total credits display
+        document.getElementById('drawer-time-left').innerText = `${totalCredits} credits`;
+
+        // Call screen single pill
+        const pill = document.getElementById('call-time-left');
+        if (pill) {
+            pill.innerText = `${totalCredits} credits`;
+            pill.style.color = totalCredits <= 5 ? '#ff4444' : '';
         }
+
+        // Hide the separate purchased pill — we're showing combined now
+        const purchasedPill = document.getElementById('call-purchased-credits');
+        if (purchasedPill) purchasedPill.style.display = 'none';
+
     } catch (e) {}
 }
 
@@ -602,16 +619,15 @@ function startDurationTimer() {
         const m = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
         const s = String(secondsElapsed % 60).padStart(2, '0');
         document.getElementById('call-duration').innerText = `${m}:${s}`;
-        // Count down remaining quota
-        const rem = Math.max(0, dailySecondsLeft - secondsElapsed);
-        const rm = String(Math.floor(rem / 60)).padStart(2,'0');
-        const rs = String(rem % 60).padStart(2,'0');
+        // Combined credits: free daily equiv + purchased
+        const freeEquiv = Math.floor(Math.max(0, dailySecondsLeft - secondsElapsed) / 60) * 5;
+        const totalRemaining = purchasedCredits + freeEquiv;
         const pill = document.getElementById('call-time-left');
         if (pill) {
-            pill.innerText = `${rm}:${rs}`;
-            pill.style.color = rem <= 30 ? '#ff4444' : '';
+            pill.innerText = `${totalRemaining} credits`;
+            pill.style.color = totalRemaining <= 5 ? '#ff4444' : '';
         }
-        if (rem <= 0) endCall();
+        if (totalRemaining <= 0) endCall();
     }, 1000);
 }
 
@@ -829,6 +845,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
         currentUserId = 'user_' + user.uid;
         restoreVoiceSelection();
         await loadUserData();
+        updateDrawerCredits();
         const loginActive = document.getElementById('login-screen')?.classList.contains('active');
         if (loginActive) navigateTo('voice-screen');
     }
@@ -839,3 +856,371 @@ window.addEventListener('load', () => {
     const screen = new URLSearchParams(window.location.search).get('screen');
     if (screen) navigateTo(screen);
 });
+
+
+
+// ═══════════════════════════════════════════
+// CREDITS & PAYMENT SYSTEM
+// ═══════════════════════════════════════════
+
+// ── Payment constants (mirrors Flutter PaymentDetailsPage) ──
+const BANK_NAME      = "Opay";
+const ACCOUNT_NAME   = "Sasa Technologies";
+const ACCOUNT_NUMBER = "9012345678";
+const USDT_ADDRESS   = "TQFMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+const USDT_NETWORK   = "TRC-20 (Tron)";
+
+// ── Credit packs — exact mirror of Flutter kCreditPacks ──
+const CREDIT_PACKS = [
+    { id: 'starter',   name: 'Starter',   credits: 50,   priceNgn: 500,  priceUsdt: 0.31, popular: false, description: '~10 mins voice call',              icon: '⚡' },
+    { id: 'popular',   name: 'Popular',   credits: 200,  priceNgn: 1500, priceUsdt: 0.93, popular: true,  description: '~40 mins voice call · best value', icon: '⭐' },
+    { id: 'pro',       name: 'Pro',       credits: 500,  priceNgn: 3000, priceUsdt: 1.85, popular: false, description: '~100 mins voice call',              icon: '💎' },
+    { id: 'unlimited', name: 'Unlimited', credits: 1200, priceNgn: 6000, priceUsdt: 3.70, popular: false, description: '~240 mins voice call — power user', icon: '∞'  },
+];
+
+// ── State ──
+let selectedPack   = CREDIT_PACKS.find(p => p.popular); // pre-select Popular like Flutter
+let selectedMethod = null;
+let paymentRef     = null;
+let pendingOrderId = null;
+let _orderListener = null;
+let purchasedCredits = 0; // cached for call screen
+
+// ── Generate reference ──
+function generateReference() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = '';
+    for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return 'SYMP-' + s;
+}
+
+// ── Render packs — list style matching Flutter _PackCard ──
+function renderPacks() {
+    const container = document.getElementById('pack-grid');
+    if (!container) return;
+    container.innerHTML = CREDIT_PACKS.map(p => {
+        const isSel = selectedPack && selectedPack.id === p.id;
+        return `
+        <div onclick="selectPack('${p.id}')" id="pack-${p.id}" style="
+            margin-bottom:12px;padding:16px;border-radius:18px;cursor:pointer;
+            background:${isSel ? 'rgba(168,85,247,0.08)' : 'rgba(255,255,255,0.03)'};
+            border:${isSel ? '1.5px solid rgba(168,85,247,0.45)' : '1px solid rgba(255,255,255,0.07)'};
+            display:flex;align-items:center;gap:14px;transition:all 0.2s;">
+            <div style="width:44px;height:44px;border-radius:12px;flex-shrink:0;
+                background:${isSel ? 'rgba(168,85,247,0.15)' : 'rgba(255,255,255,0.05)'};
+                display:flex;align-items:center;justify-content:center;font-size:20px;">
+                ${p.icon}
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:15px;font-weight:bold;color:${isSel ? 'white' : 'rgba(255,255,255,0.8)'};">${p.name}</span>
+                    ${p.popular ? `<span style="font-size:9px;font-weight:bold;color:#a855f7;background:rgba(168,85,247,0.15);padding:2px 7px;border-radius:5px;letter-spacing:0.5px;">BEST VALUE</span>` : ''}
+                </div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-top:3px;">${p.description}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:16px;font-weight:bold;color:${isSel ? 'white' : 'rgba(255,255,255,0.7)'};">₦${p.priceNgn.toLocaleString()}</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.3);">$${p.priceUsdt.toFixed(2)} USDT</div>
+            </div>
+            <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;
+                background:${isSel ? '#a855f7' : 'transparent'};
+                border:1.5px solid ${isSel ? '#a855f7' : 'rgba(255,255,255,0.2)'};
+                display:flex;align-items:center;justify-content:center;">
+                ${isSel ? '<i class="fas fa-check" style="color:white;font-size:10px;"></i>' : ''}
+            </div>
+        </div>`;
+    }).join('');
+    updateUpgradeCTA();
+}
+
+function selectPack(packId) {
+    selectedPack = CREDIT_PACKS.find(p => p.id === packId);
+    renderPacks(); // re-render to update highlight
+}
+
+function updateUpgradeCTA() {
+    const btn = document.getElementById('upgrade-cta-btn');
+    if (!btn) return;
+    if (selectedPack) {
+        btn.style.background = 'linear-gradient(135deg,#7b2ff7,#4776E6)';
+        btn.style.boxShadow  = '0 6px 20px rgba(123,47,247,0.3)';
+        btn.style.color      = 'white';
+        btn.innerText        = `Continue with ${selectedPack.name} Pack  →`;
+    } else {
+        btn.style.background = 'rgba(255,255,255,0.06)';
+        btn.style.boxShadow  = 'none';
+        btn.style.color      = 'rgba(255,255,255,0.3)';
+        btn.innerText        = 'Select a pack to continue';
+    }
+}
+
+function proceedFromUpgrade() {
+    if (!selectedPack) return;
+    renderPaymentMethodSummary();
+    navigateTo('payment-method-screen');
+}
+
+// ── Payment method screen ──
+function renderPaymentMethodSummary() {
+    const box = document.getElementById('pm-order-summary');
+    if (!box || !selectedPack) return;
+    box.innerHTML = `
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(123,47,247,0.1);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${selectedPack.icon}</div>
+        <div style="flex:1;">
+            <div style="font-size:14px;font-weight:bold;color:white;">${selectedPack.name} Pack</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.4);">${selectedPack.credits} credits</div>
+        </div>
+        <div style="text-align:right;">
+            <div style="font-size:16px;font-weight:bold;color:white;">₦${selectedPack.priceNgn.toLocaleString()}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);">$${selectedPack.priceUsdt.toFixed(2)} USDT</div>
+        </div>`;
+    selectedMethod = null;
+    updateMethodUI();
+}
+
+function selectPayMethod(method) {
+    selectedMethod = method;
+    updateMethodUI();
+}
+
+function updateMethodUI() {
+    const isNgn  = selectedMethod === 'ngn';
+    const isUsdt = selectedMethod === 'usdt';
+
+    const ngnEl   = document.getElementById('method-ngn');
+    const usdtEl  = document.getElementById('method-usdt');
+    const radioN  = document.getElementById('radio-ngn');
+    const radioU  = document.getElementById('radio-usdt');
+    if (!ngnEl) return;
+
+    ngnEl.style.border      = isNgn  ? '1.5px solid rgba(34,197,94,0.4)'   : '1px solid rgba(255,255,255,0.07)';
+    ngnEl.style.background  = isNgn  ? 'rgba(34,197,94,0.06)'              : 'rgba(255,255,255,0.03)';
+    radioN.innerHTML        = isNgn  ? '<i class="fas fa-check" style="color:#22c55e;font-size:10px;"></i>' : '';
+    radioN.style.background = isNgn  ? '#22c55e'    : 'transparent';
+    radioN.style.border     = isNgn  ? 'none'        : '1.5px solid rgba(255,255,255,0.2)';
+
+    usdtEl.style.border      = isUsdt ? '1.5px solid rgba(38,161,123,0.4)'  : '1px solid rgba(255,255,255,0.07)';
+    usdtEl.style.background  = isUsdt ? 'rgba(38,161,123,0.06)'             : 'rgba(255,255,255,0.03)';
+    radioU.innerHTML         = isUsdt ? '<i class="fas fa-check" style="color:#26a17b;font-size:10px;"></i>' : '';
+    radioU.style.background  = isUsdt ? '#26a17b'    : 'transparent';
+    radioU.style.border      = isUsdt ? 'none'        : '1.5px solid rgba(255,255,255,0.2)';
+
+    const btn = document.getElementById('pm-continue-btn');
+    if (btn) {
+        btn.style.background = selectedMethod ? 'linear-gradient(135deg,#7b2ff7,#4776E6)' : 'rgba(255,255,255,0.06)';
+        btn.style.color      = selectedMethod ? 'white' : 'rgba(255,255,255,0.3)';
+        btn.innerText        = selectedMethod ? 'Continue to Payment Details  →' : 'Select a payment method';
+    }
+}
+
+function proceedToPaymentDetails() {
+    if (!selectedMethod || !selectedPack) return;
+    paymentRef = generateReference();
+    renderPaymentDetails();
+    navigateTo('payment-details-screen');
+}
+
+// ── Payment details screen ──
+function detailRow(label, value, highlight, mono, copyFn) {
+    const copyBtn = copyFn ? `<div onclick="${copyFn}" style="cursor:pointer;padding:7px;background:rgba(255,255,255,0.06);border-radius:8px;flex-shrink:0;"><i class="fas fa-copy" style="color:rgba(255,255,255,0.4);font-size:13px;"></i></div>` : '';
+    return `<div style="margin-bottom:8px;padding:14px 16px;border-radius:14px;
+        background:${highlight ? 'rgba(68,138,255,0.06)' : 'rgba(255,255,255,0.03)'};
+        border:1px solid ${highlight ? 'rgba(68,138,255,0.2)' : 'rgba(255,255,255,0.06)'};
+        display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;">
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:3px;">${label}</div>
+            <div style="font-size:${mono ? '13px' : '15px'};color:white;font-weight:${highlight ? 'bold' : '500'};font-family:${mono ? 'monospace' : 'inherit'};word-break:break-all;">${value}</div>
+        </div>${copyBtn}</div>`;
+}
+
+function copyText(text, label) {
+    navigator.clipboard.writeText(text).then(() => showToast(`${label} copied!`)).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        showToast(`${label} copied!`);
+    });
+}
+
+function renderPaymentDetails() {
+    if (!selectedPack || !selectedMethod || !paymentRef) return;
+    const isNgn = selectedMethod === 'ngn';
+    const amount = isNgn ? `₦${selectedPack.priceNgn.toLocaleString()}` : `$${selectedPack.priceUsdt.toFixed(2)} USDT`;
+    const accentColor = isNgn ? '#22c55e' : '#26a17b';
+
+    let html = `
+    <div style="padding:20px;border-radius:18px;background:${accentColor}14;border:1px solid ${accentColor}30;margin-bottom:20px;">
+        <div style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:1.2px;margin-bottom:6px;">AMOUNT TO PAY</div>
+        <div style="font-size:32px;font-weight:bold;color:white;">${amount}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-top:4px;">${selectedPack.credits} credits · ${selectedPack.name} Pack</div>
+    </div>
+    <p style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:1.5px;font-weight:600;margin-bottom:10px;">YOUR REFERENCE</p>
+    <div style="margin-bottom:20px;padding:16px;border-radius:14px;background:rgba(123,47,247,0.07);border:1px solid rgba(123,47,247,0.2);display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="copyText('${paymentRef}','Reference')">
+        <div style="flex:1;">
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:6px;">Include this in your payment description</div>
+            <div style="font-size:22px;font-weight:bold;color:white;letter-spacing:3px;font-family:monospace;">${paymentRef}</div>
+        </div>
+        <i class="fas fa-copy" style="color:#a855f7;font-size:16px;flex-shrink:0;"></i>
+    </div>`;
+
+    if (isNgn) {
+        html += `
+    <p style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:1.5px;font-weight:600;margin-bottom:10px;">BANK DETAILS</p>
+    ${detailRow('Bank Name', BANK_NAME, false, false, null)}
+    ${detailRow('Account Name', ACCOUNT_NAME, true, false, null)}
+    ${detailRow('Account Number', ACCOUNT_NUMBER, true, true, "copyText('" + ACCOUNT_NUMBER + "','Account number')")}`;
+    } else {
+        html += `
+    <p style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:1.5px;font-weight:600;margin-bottom:10px;">USDT DETAILS</p>
+    ${detailRow('Network', USDT_NETWORK, false, false, null)}
+    ${detailRow('Wallet Address', USDT_ADDRESS, true, true, "copyText('" + USDT_ADDRESS + "','Wallet address')")}`;
+    }
+
+    const warning = isNgn
+        ? 'Transfer the exact amount and include your reference as the payment description. Payments without a reference may be delayed.'
+        : 'Send the exact USDT amount on TRC-20 network ONLY. Do NOT use ERC-20 or BEP-20 — funds sent on the wrong network will be lost.';
+
+    html += `
+    <div style="margin-top:20px;padding:14px;border-radius:14px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);display:flex;align-items:flex-start;gap:10px;">
+        <i class="fas fa-info-circle" style="color:#f59e0b;font-size:14px;margin-top:1px;flex-shrink:0;"></i>
+        <span style="font-size:12px;color:rgba(245,158,11,0.8);line-height:1.6;">${warning}</span>
+    </div>`;
+
+    document.getElementById('pd-content').innerHTML = html;
+}
+
+// ── Submit payment ──
+async function submitPayment() {
+    const user = firebase.auth().currentUser;
+    if (!user || !selectedPack || !selectedMethod || !paymentRef) return;
+
+    const btn     = document.getElementById('pd-paid-btn');
+    const btnText = btn.querySelector('span');
+    const loader  = btn.querySelector('.loader');
+    btn.disabled = true; btnText.style.display = 'none'; loader.style.display = 'block';
+
+    try {
+        const orderRef = await firebase.firestore().collection('pending_orders').add({
+            user_id:        user.uid,
+            user_email:     user.email || '',
+            user_name:      user.displayName || '',
+            pack_id:        selectedPack.id,
+            pack_name:      selectedPack.name,
+            credits:        selectedPack.credits,
+            amount_ngn:     selectedPack.priceNgn,
+            amount_usdt:    selectedPack.priceUsdt,
+            payment_method: selectedMethod,
+            reference:      paymentRef,
+            status:         'pending',
+            created_at:     firebase.firestore.FieldValue.serverTimestamp(),
+            approved_at:    null,
+            approved_by:    null,
+        });
+        pendingOrderId = orderRef.id;
+
+        // Fire-and-forget Telegram notify
+        fetch(`${BASE_URL}/notify_admin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': API_KEY },
+            body: JSON.stringify({
+                order_id: orderRef.id, user_name: user.displayName || '',
+                user_email: user.email || '', pack_name: selectedPack.name,
+                credits: selectedPack.credits, amount_ngn: selectedPack.priceNgn,
+                amount_usdt: selectedPack.priceUsdt, payment_method: selectedMethod,
+                reference: paymentRef,
+            })
+        }).catch(() => {});
+
+        renderPendingScreen('pending');
+        navigateTo('payment-pending-screen');
+        listenForOrderApproval(orderRef.id);
+
+    } catch (e) {
+        showToast('Error: ' + e.message);
+        btn.disabled = false; btnText.style.display = ''; loader.style.display = 'none';
+    }
+}
+
+// ── Pending screen states ──
+function renderPendingScreen(status) {
+    const body = document.getElementById('pending-body');
+    if (!body || !selectedPack || !paymentRef) return;
+
+    if (status === 'approved') {
+        body.innerHTML = `
+        <div style="text-align:center;">
+            <div style="width:80px;height:80px;border-radius:50%;background:rgba(34,197,94,0.12);border:2px solid rgba(34,197,94,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:36px;">✅</div>
+            <h2 style="font-size:22px;font-weight:bold;margin-bottom:10px;">Credits Added!</h2>
+            <p style="color:rgba(255,255,255,0.5);font-size:14px;line-height:1.6;margin-bottom:28px;">${selectedPack.credits} credits have been added to your account.</p>
+            <button onclick="navigateTo('chat-screen')" style="width:100%;height:52px;border-radius:16px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;font-size:15px;font-weight:bold;cursor:pointer;">Start Chatting! 🎉</button>
+        </div>`;
+        if (_orderListener) { _orderListener(); _orderListener = null; }
+        updateDrawerCredits();
+        return;
+    }
+
+    if (status === 'rejected') {
+        body.innerHTML = `
+        <div style="text-align:center;">
+            <div style="width:80px;height:80px;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:36px;">❌</div>
+            <h2 style="font-size:20px;font-weight:bold;margin-bottom:10px;">Payment Not Confirmed</h2>
+            <p style="color:rgba(255,255,255,0.4);font-size:13px;line-height:1.6;margin-bottom:16px;">We couldn't verify your payment. Contact support with your reference.</p>
+            <div style="padding:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;margin-bottom:28px;">
+                <span style="font-family:monospace;color:rgba(255,255,255,0.5);font-size:13px;">Reference: ${paymentRef}</span>
+            </div>
+            <a href="mailto:support@sympyapp.com" style="display:block;text-align:center;margin-bottom:12px;color:#448AFF;font-size:13px;">support@sympyapp.com</a>
+            <button onclick="navigateTo('voice-screen')" style="width:100%;height:52px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:white;font-size:15px;font-weight:bold;cursor:pointer;">Go Back to Home</button>
+        </div>`;
+        if (_orderListener) { _orderListener(); _orderListener = null; }
+        return;
+    }
+
+    // Pending
+    body.innerHTML = `
+    <div style="text-align:center;width:100%;">
+        <div style="width:100px;height:100px;border-radius:50%;background:rgba(168,85,247,0.1);border:2px solid rgba(168,85,247,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 28px;font-size:44px;animation:pendingPulse 1.4s ease-in-out infinite;">⏳</div>
+        <h2 style="font-size:22px;font-weight:bold;margin-bottom:10px;">Verifying Payment</h2>
+        <p style="color:rgba(255,255,255,0.45);font-size:14px;line-height:1.6;margin-bottom:32px;">Our team is reviewing your payment. Credits will be added within 1 hour.</p>
+        <div style="padding:16px;background:rgba(168,85,247,0.07);border:1px solid rgba(168,85,247,0.2);border-radius:16px;margin-bottom:16px;">
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:1.2px;margin-bottom:6px;">YOUR REFERENCE</div>
+            <div style="font-size:22px;font-weight:bold;color:white;letter-spacing:3px;font-family:monospace;">${paymentRef}</div>
+        </div>
+        <div style="padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;margin-bottom:32px;display:flex;justify-content:space-between;">
+            <span style="color:white;font-size:14px;">${selectedPack.name} Pack</span>
+            <span style="color:rgba(255,255,255,0.4);font-size:14px;">${selectedPack.credits} credits</span>
+        </div>
+        <p style="font-size:12px;color:rgba(255,255,255,0.2);line-height:1.6;margin-bottom:16px;">You can safely close this screen.<br>We'll update it when credits are added.</p>
+        <button onclick="navigateTo('voice-screen')" style="background:none;border:none;color:rgba(255,255,255,0.3);font-size:13px;text-decoration:underline;cursor:pointer;">Go back to home</button>
+    </div>`;
+}
+
+// ── Firestore real-time listener ──
+function listenForOrderApproval(orderId) {
+    if (_orderListener) { _orderListener(); _orderListener = null; }
+    _orderListener = firebase.firestore()
+        .collection('pending_orders').doc(orderId)
+        .onSnapshot(snap => {
+            if (!snap.exists) return;
+            const s = snap.data().status || 'pending';
+            if (s === 'approved' || s === 'rejected') renderPendingScreen(s);
+        });
+}
+
+// ── Update drawer & call screen with purchased credits ──
+async function updateDrawerCredits() {
+    const user = firebase.auth().currentUser;
+    if (!user) return;
+    try {
+        const doc = await firebase.firestore().collection('users').doc(user.uid).get();
+        purchasedCredits = doc.exists ? (doc.data().credits || 0) : 0;
+        // Refresh the combined display
+        updateDrawerQuota();
+    } catch(e) {}
+}
+
+// Pulse animation
+const payStyle = document.createElement('style');
+payStyle.innerText = `@keyframes pendingPulse{0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,0.3);}50%{box-shadow:0 0 0 14px rgba(168,85,247,0);}}`;
+document.head.appendChild(payStyle);
+
+// (done inline in the original navigateTo function above)
