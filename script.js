@@ -81,45 +81,39 @@ function updateDrawerUser() {
 async function updateDrawerQuota() {
     if (!currentUserId) return;
     try {
-        const res = await fetch(`${BASE_URL}/call_quota`, {
-            headers: { 'X-API-KEY': API_KEY, 'X-Device-Id': currentUserId }
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        const remaining = data.seconds_remaining ?? 300;
-        const limit     = data.limit ?? 300;
-        dailySecondsLeft = remaining;
-        const used = limit - remaining;
+        // Read one-time free seconds from Firestore (never resets)
+        const uid = currentUserId.replace('user_', '');
+        const doc = await firebase.firestore().collection('users').doc(uid).get();
+        const freeSeconds = doc.exists ? (doc.data().free_seconds_remaining ?? 0) : 0;
+        const totalFreeSeconds = 300; // original signup grant
 
-        // Free daily minutes → credit equivalent (5 credits per minute)
-        const freeCreditsEquiv = Math.floor(remaining / 60) * 5;
+        dailySecondsLeft = freeSeconds + (purchasedCredits * 12); // 5 credits = 1 min = 60s, so 1 credit = 12s
 
-        // Combined total = purchased + free daily equivalent
+        // Credits display: purchased + free minutes equivalent
+        const freeCreditsEquiv = Math.floor(freeSeconds / 60) * 5;
         const totalCredits = purchasedCredits + freeCreditsEquiv;
 
-        // Drawer quota bar (based on daily free time used)
-        document.getElementById('drawer-quota-bar').style.width = Math.min((used / limit) * 100, 100) + '%';
+        // Quota bar (based on one-time free seconds used)
+        const usedSeconds = totalFreeSeconds - freeSeconds;
+        document.getElementById('drawer-quota-bar').style.width =
+            Math.min((usedSeconds / totalFreeSeconds) * 100, 100) + '%';
 
-        // Reset time label
-        const now = new Date();
-        const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-        const diff = midnight - now;
-        const dh = Math.floor(diff / 3600000);
-        const dm = Math.floor((diff % 3600000) / 60000);
-        document.getElementById('drawer-reset-label').innerText =
-            `Resets in ${dh}h ${String(dm).padStart(2,'0')}m`;
+        // Label — no reset, it's one-time
+        const freeLabel = freeSeconds > 0
+            ? `${Math.floor(freeSeconds / 60)}m ${freeSeconds % 60}s free time left`
+            : 'Free minutes used up';
+        document.getElementById('drawer-reset-label').innerText = freeLabel;
 
-        // Drawer total credits display
+        // Credits display
         document.getElementById('drawer-time-left').innerText = `${totalCredits} credits`;
 
-        // Call screen single pill
+        // Call screen pill
         const pill = document.getElementById('call-time-left');
         if (pill) {
             pill.innerText = `${totalCredits} credits`;
             pill.style.color = totalCredits <= 5 ? '#ff4444' : '';
         }
 
-        // Hide the separate purchased pill — we're showing combined now
         const purchasedPill = document.getElementById('call-purchased-credits');
         if (purchasedPill) purchasedPill.style.display = 'none';
 
@@ -753,6 +747,20 @@ async function handleSignup() {
         const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
         await cred.user.updateProfile({ displayName: name });
         await cred.user.sendEmailVerification();
+
+        // Initialize user doc with 5 free minutes (300s) — one-time, never resets
+        try {
+            await firebase.firestore().collection('users').doc(cred.user.uid).set({
+                credits: 0,
+                is_premium: false,
+                email: email,
+                created_at: firebase.firestore.FieldValue.serverTimestamp(),
+                free_seconds_remaining: 300,  // 5 mins one-time signup bonus
+            });
+        } catch (e) {
+            console.warn('[Signup] Firestore user init failed:', e);
+        }
+
         showToast("Verification email sent! Check your inbox.");
         navigateTo('login-screen');
     } catch (e) { showToast(e.message); }
@@ -865,17 +873,17 @@ window.addEventListener('load', () => {
 
 // ── Payment constants (mirrors Flutter PaymentDetailsPage) ──
 const BANK_NAME      = "Opay";
-const ACCOUNT_NAME   = "Sasa Technologies";
-const ACCOUNT_NUMBER = "9012345678";
-const USDT_ADDRESS   = "TQFMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+const ACCOUNT_NAME   = "Sosa Technologies";
+const ACCOUNT_NUMBER = "9059607887";
+const USDT_ADDRESS   = "TGEU6XSCuKZdeAf8Xwn2jkgsJVeY7hNd51";
 const USDT_NETWORK   = "TRC-20 (Tron)";
 
 // ── Credit packs — exact mirror of Flutter kCreditPacks ──
 const CREDIT_PACKS = [
-    { id: 'starter',   name: 'Starter',   credits: 50,   priceNgn: 500,  priceUsdt: 0.31, popular: false, description: '~10 mins voice call',              icon: '⚡' },
-    { id: 'popular',   name: 'Popular',   credits: 200,  priceNgn: 1500, priceUsdt: 0.93, popular: true,  description: '~40 mins voice call · best value', icon: '⭐' },
-    { id: 'pro',       name: 'Pro',       credits: 500,  priceNgn: 3000, priceUsdt: 1.85, popular: false, description: '~100 mins voice call',              icon: '💎' },
-    { id: 'unlimited', name: 'Unlimited', credits: 1200, priceNgn: 6000, priceUsdt: 3.70, popular: false, description: '~240 mins voice call — power user', icon: '∞'  },
+    { id: 'starter',   name: 'Starter',   credits: 50,   priceNgn: 2500,  priceUsdt: 1.55, popular: false, description: '~10 mins voice call',              icon: '⚡' },
+    { id: 'popular',   name: 'Popular',   credits: 200,  priceNgn: 8500,  priceUsdt: 5.30, popular: true,  description: '~40 mins voice call · best value', icon: '⭐' },
+    { id: 'pro',       name: 'Pro',       credits: 500,  priceNgn: 19500, priceUsdt: 12.20, popular: false, description: '~100 mins voice call',             icon: '💎' },
+    { id: 'unlimited', name: 'Unlimited', credits: 1200, priceNgn: 42000, priceUsdt: 26.25, popular: false, description: '~240 mins voice call — power user', icon: '∞' },
 ];
 
 // ── State ──
